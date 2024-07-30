@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 """
-Module for the HBNBCommand console.
+Module for console
 """
 import cmd
 import re
@@ -16,56 +16,58 @@ from models.state import State
 from models.city import City
 
 
-def parse_curly_braces(arg):
+def split_curly_braces(e_arg):
     """
-    Parses the curly braces for the update command.
+    Splits the curly braces for the update method
     """
-    braces_content = re.search(r"\{(.*?)\}", arg)
+    curly_braces = re.search(r"\{(.*?)\}", e_arg)
 
-    if braces_content:
-        id_with_comma = shlex.split(arg[:braces_content.span()[0]])
-        obj_id = [i.strip(",") for i in id_with_comma][0]
+    if curly_braces:
+        id_with_comma = shlex.split(e_arg[:curly_braces.span()[0]])
+        id = [i.strip(",") for i in id_with_comma][0]
 
-        data_str = braces_content.group(1)
+        str_data = curly_braces.group(1)
         try:
-            parsed_dict = ast.literal_eval("{" + data_str + "}")
+            arg_dict = ast.literal_eval("{" + str_data + "}")
         except Exception:
-            print("** invalid dictionary format **")
+            print("**  invalid dictionary format **")
             return
-        return obj_id, parsed_dict
+        return id, arg_dict
     else:
-        parts = arg.split(",")
-        if parts:
+        commands = e_arg.split(",")
+        if commands:
             try:
-                obj_id = parts[0]
+                id = commands[0]
             except Exception:
                 return "", ""
             try:
-                attr_name = parts[1]
+                attr_name = commands[1]
             except Exception:
-                return obj_id, ""
+                return id, ""
             try:
-                attr_value = parts[2]
+                attr_value = commands[2]
             except Exception:
-                return obj_id, attr_name
-            return f"{obj_id}", f"{attr_name} {attr_value}"
+                return id, attr_name
+            return f"{id}", f"{attr_name} {attr_value}"
+
 
 class HBNBCommand(cmd.Cmd):
     """
-    HBNBCommand console class for interactive command line.
+    HBNBCommand console class
     """
     prompt = "(hbnb) "
-    valid_classes = ["BaseModel", "User", "Amenity", "Place", "Review", "State", "City"]
+    valid_classes = ["BaseModel", "User", "Amenity",
+                     "Place", "Review", "State", "City"]
 
     def emptyline(self):
         """
-        Do nothing on receiving an empty line.
+        Do nothing when an empty line is entered.
         """
         pass
 
     def do_EOF(self, arg):
         """
-        Handle EOF (Ctrl+D) to exit the program.
+        EOF (Ctrl+D) signal to exit the program.
         """
         return True
 
@@ -94,6 +96,7 @@ class HBNBCommand(cmd.Cmd):
             for i in range(1, len(commands)):
                 key = commands[i].split("=")[0]
                 value = commands[i].split("=")[1]
+                # key, value = tuple(commands[i].split("="))
                 if value.startswith('"'):
                     value = value.strip('"').replace("_", " ")
                 else:
@@ -161,7 +164,7 @@ class HBNBCommand(cmd.Cmd):
         """
         Print the string representation of all instances or a specific class.
         Usage: <User>.all()
-               <User>.show()
+                <User>.show()
         """
         objects = storage.all()
         commands = shlex.split(arg)
@@ -178,20 +181,20 @@ class HBNBCommand(cmd.Cmd):
 
     def do_count(self, arg):
         """
-        Counts and retrieves the number of instances of a class.
-        Usage: <class name>.count()
+        Counts and retrieves the number of instances of a class
+        usage: <class name>.count()
         """
         objects = storage.all()
         commands = shlex.split(arg)
 
         if arg:
-            class_name = commands[0]
+            incoming_class_name = commands[0]
         count = 0
 
         if commands:
-            if class_name in self.valid_classes:
+            if incoming_class_name in self.valid_classes:
                 for obj in objects.values():
-                    if obj.__class__.__name__ == class_name:
+                    if obj.__class__.__name__ == incoming_class_name:
                         count += 1
                 print(count)
             else:
@@ -223,21 +226,27 @@ class HBNBCommand(cmd.Cmd):
                 print("** value missing **")
             else:
                 obj = objects[key]
-                braces_content = re.search(r"\{(.*?)\}", arg)
+                curly_braces = re.search(r"\{(.*?)\}", arg)
 
-                if braces_content:
+                if curly_braces:
+                    # added to catch errors
                     try:
-                        data_str = braces_content.group(1)
-                        parsed_dict = ast.literal_eval("{" + data_str + "}")
-                        attr_names = list(parsed_dict.keys())
-                        attr_values = list(parsed_dict.values())
-
+                        str_data = curly_braces.group(1)
+                        arg_dict = ast.literal_eval("{" + str_data + "}")
+                        attribute_names = list(arg_dict.keys())
+                        attribute_values = list(arg_dict.values())
+                        # added to catch exception
                         try:
-                            setattr(obj, attr_names[0], attr_values[0])
+                            attr_name1 = attribute_names[0]
+                            attr_value1 = attribute_values[0]
+                            setattr(obj, attr_name1, attr_value1)
                         except Exception:
                             pass
                         try:
-                            setattr(obj, attr_names[1], attr_values[1])
+                            # added to catch exception
+                            attr_name2 = attribute_names[1]
+                            attr_value2 = attribute_values[1]
+                            setattr(obj, attr_name2, attr_value2)
                         except Exception:
                             pass
                     except Exception:
@@ -245,24 +254,22 @@ class HBNBCommand(cmd.Cmd):
                 else:
                     attr_name = commands[2]
                     attr_value = commands[3]
-
                     try:
                         attr_value = eval(attr_value)
                     except Exception:
                         pass
                     setattr(obj, attr_name, attr_value)
-
                 obj.save()
 
     def default(self, arg):
         """
-        Default behavior for cmd module when input is invalid.
+        Default behavior for cmd module when input is invalid
         """
         arg_list = arg.split('.')
-        class_name = arg_list[0]
+        cls_nm = arg_list[0]  # incoming class name
         command = arg_list[1].split('(')
-        method = command[0]
-        extra_arg = command[1].split(')')[0]
+        cmd_met = command[0]  # incoming command method
+        e_arg = command[1].split(')')[0]  # extra arguments
 
         method_dict = {
             'all': self.do_all,
@@ -272,19 +279,20 @@ class HBNBCommand(cmd.Cmd):
             'count': self.do_count
         }
 
-        if method in method_dict.keys():
-            if method != "update":
-                return method_dict[method]("{} {}".format(class_name, extra_arg))
+        if cmd_met in method_dict.keys():
+            if cmd_met != "update":
+                return method_dict[cmd_met]("{} {}".format(cls_nm, e_arg))
             else:
-                if not class_name:
+                if not cls_nm:
                     print("** class name missing **")
                     return
                 try:
-                    obj_id, arg_dict = parse_curly_braces(extra_arg)
+                    obj_id, arg_dict = split_curly_braces(e_arg)
                 except Exception:
                     pass
                 try:
-                    return method_dict[method]("{} {} {}".format(class_name, obj_id, arg_dict))
+                    call = method_dict[cmd_met]
+                    return call("{} {} {}".format(cls_nm, obj_id, arg_dict))
                 except Exception:
                     pass
         else:
