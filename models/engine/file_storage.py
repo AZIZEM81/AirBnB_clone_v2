@@ -1,70 +1,83 @@
 #!/usr/bin/python3
-"""This module defines a class for managing file storage in a JSON format
-for AirBnB clone project"""
+"""This module defines a class to manage file storage for the HBNB clone."""
+
 import json
+from models.base_model import BaseModel
+from models.user import User
+from models.place import Place
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.review import Review
 
 
 class FileStorage:
-    """Class to handle the storage of models in JSON format"""
+    """This class manages storage of HBNB models in JSON format."""
+    
     __file_path = 'file.json'
     __objects = {}
 
     def all(self, cls=None):
-        """Returns a dictionary of all models in storage, filtered by class
-        if provided"""
-        if cls is None:
-            return self.__objects
-        filtered_objects = {}
-        cls_name = cls.__name__
-        for key, value in self.__objects.items():
-            if key.split('.')[0] == cls_name:
-                filtered_objects[key] = value
-        return filtered_objects
+        """Returns a dictionary of models currently in storage.
+
+        Args:
+            cls (class, optional): If specified, filters the result to include
+                only objects of the specified class.
+
+        Returns:
+            dict: A dictionary containing objects in storage.
+        """
+        if cls:
+            if isinstance(cls, str):
+                cls = globals().get(cls)
+            if cls and issubclass(cls, BaseModel):
+                cls_dict = {
+                    k: v for k, v in self.__objects.items() if isinstance(v, cls)
+                }
+                return cls_dict
+        return FileStorage.__objects
 
     def new(self, obj):
-        """Adds a new object to the storage dictionary"""
-        key = obj.to_dict()['__class__'] + '.' + obj.id
-        self.__objects[key] = obj
+        """Adds new object to storage dictionary."""
+        self.all().update({
+            f"{obj.to_dict()['__class__']}.{obj.id}": obj
+        })
 
     def save(self):
-        """Serializes the storage dictionary to a JSON file"""
-        with open(self.__file_path, 'w') as file:
-            temp_storage = {
-                key: value.to_dict() for key, value in self.__objects.items()
-            }
-            json.dump(temp_storage, file)
+        """Saves storage dictionary to file."""
+        with open(FileStorage.__file_path, 'w') as f:
+            temp = {}
+            temp.update(FileStorage.__objects)
+            for key, val in temp.items():
+                temp[key] = val.to_dict()
+            json.dump(temp, f)
 
     def reload(self):
-        """Deserializes the JSON file to the storage dictionary"""
-        from models.base_model import BaseModel
-        from models.user import User
-        from models.place import Place
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.review import Review
-
-        class_map = {
+        """Loads storage dictionary from file."""
+        classes = {
             'BaseModel': BaseModel, 'User': User, 'Place': Place,
             'State': State, 'City': City, 'Amenity': Amenity,
             'Review': Review
         }
         try:
-            with open(self.__file_path, 'r') as file:
-                loaded_data = json.load(file)
-                for key, value in loaded_data.items():
-                    class_name = value['__class__']
-                    self.__objects[key] = class_map[class_name](**value)
+            with open(FileStorage.__file_path, 'r') as f:
+                temp = json.load(f)
+                for key, val in temp.items():
+                    self.all()[key] = classes[val['__class__']](**val)
         except FileNotFoundError:
-            return
+            pass
+        except json.decoder.JSONDecodeError:
+            pass
 
     def delete(self, obj=None):
-        """Deletes an object from the storage dictionary"""
-        if obj is not None:
-            key = obj.to_dict()['__class__'] + '.' + obj.id
-            if key in self.__objects:
-                del self.__objects[key]
+        """Deletes obj from __objects if it’s inside.
 
-    def close(self):
-        """Calls the reload method"""
-        self.reload()
+        If obj is None, the method does nothing.
+        """
+        if obj is None:
+            return
+        obj_to_del = f"{obj.__class__.__name__}.{obj.id}"
+        try:
+            del FileStorage.__objects[obj_to_del]
+        except (AttributeError, KeyError, KeyboardInterrupt):
+            pass
