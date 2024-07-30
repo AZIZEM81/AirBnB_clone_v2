@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-"""This module defines a class to manage file storage for hbnb clone"""
+"""This module defines a class to manage file storage for hbnb clone."""
+
 import json
 from models.base_model import BaseModel
 from models.user import User
@@ -11,7 +12,8 @@ from models.review import Review
 
 
 class FileStorage:
-    """This class manages storage of hbnb models in JSON format"""
+    """This class manages storage of hbnb models in JSON format."""
+
     __file_path = 'file.json'
     __objects = {}
 
@@ -34,13 +36,17 @@ class FileStorage:
         return FileStorage.__objects
 
     def new(self, obj):
-        """Adds new object to storage dictionary"""
+        """Adds new object to storage dictionary.
+
+        Args:
+            obj (BaseModel): The object to be added to storage.
+        """
         self.all().update({
             obj.to_dict()['__class__'] + '.' + obj.id: obj
         })
 
     def save(self):
-        """Saves storage dictionary to file"""
+        """Saves storage dictionary to file."""
         with open(FileStorage.__file_path, 'w') as f:
             temp = {}
             temp.update(FileStorage.__objects)
@@ -68,12 +74,13 @@ class FileStorage:
             pass
 
     def delete(self, obj=None):
-        """
-        Delete obj from __objects if it’s inside - if obj is equal to None,
-        the method should not do anything
+        """Deletes an object from storage if it exists.
+
+        Args:
+            obj (BaseModel, optional): The object to be deleted from storage.
         """
         if obj is None:
             return
         obj_key = f"{obj.__class__.__name__}.{obj.id}"
         if obj_key in FileStorage.__objects:
-            del FileStorage.__objects[obj_ke]
+            del FileStorage.__objects[obj_key]
